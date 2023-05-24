@@ -1,0 +1,798 @@
+---
+title: "Portfolio Analysis of SMI Stocks: Risk Analysis and Optimization of Portfolio Weights"
+author: "Daniele Buson and Goran Nikolov"
+date: "2023-05-22"
+output:
+  html_document:
+    df_print: kable
+    number_sections: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    code_folding: hide
+  pdf_document:
+    citation_package: natbib
+    df_print: kable
+    fig_crop: no
+    latex_engine: xelatex
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+geometry:
+- top=25mm
+- bottom=25mm
+- left=25mm
+- right=25mm
+- heightrounded
+highlight-style: pygments 
+linkcolor: blue
+urlcolor: blue
+mainfont: Arial
+fontsize: 12pt
+sansfont: Verdana
+documentclass: report
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r title image, echo=FALSE, fig.align="center", message=FALSE, warning=FALSE,  out.width="100%", out.height="100%", dpi=600}
+knitr::include_graphics("photos/wall.jpeg")
+```
+
+
+```{r setup, include=FALSE}
+#global chunks options
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+knitr::opts_chunk$set(message = TRUE)
+
+#option for chunk caching.
+cache = FALSE
+
+#option for figure caching.
+fig.cache = FALSE
+
+```
+
+
+# Abstract {.tabset}
+
+In today's uncertain financial climate, portfolio management is more crucial than ever. Investors need sophisticated methods to manage risk and optimize returns. With a focus on risk management and the optimization of portfolio weights, this project aims to provide a thorough analysis of stocks that are part of the Swiss Market Index (SMI). The goal of the study is to determine the best portfolio structure that maximizes returns while minimizing risk. To this end, it uses three different weight allocation strategies: equal allocation, and two different optimal allocation according to Markowitz's Modern Portfolio Theory (MPT). This project has also the goal of representing where the portfolios are located in comparison with Markovitz Efficient frontier and Michaud's Resampled Efficient Frontier (REF). The investigation considers the more complex methodology of Michaud's REF and acknowledges the inherent limitations of MPT. The latter employs resampling techniques to take into account the ambiguity and estimation flaws in financial forecasts, resulting in a more reliable and well-rounded portfolio solution. The study concludes with a comparison of these approaches, offering useful advice for managing financial portfolios.
+
+#  Existing Literature {.tabset}
+
+The Modern Portfolio Theory (MPT), which was first presented by Harry Markowitz in 1952, is substantially at the core of the body of extant literature in the field of portfolio optimization. MPT transformed how risk and returns in financial investments are understood, earning Markowitz the 1990 Nobel Prize. The idea of a "efficient frontier"—a collection of ideal portfolios that provide the best projected return for a specific degree of risk—was introduced. MPT has been criticized for its sensitivity to estimation errors, which could result in portfolio choices that are overly concentrated in a few assets, despite its revolutionary impact on finance.
+
+In order to overcome the constraints of MPT, Richard Michaud and his son Robert Michaud invented the Resampled Efficient Frontier (REF) in 1998. Their research questioned the tenets of MPT and provided a more reliable strategy for optimizing a portfolio. The REF approach creates a wide range of potential portfolio scenarios by using resampling, a method of modeling different combinations of assets and their probable future returns. This method produces portfolios that are better diversified and less susceptible to input estimation errors while also offering a more realistic picture of the uncertainty present in financial markets.
+
+
+## Harry Markowitz MPT
+
+```{r mark image, echo=FALSE, fig.align="center", message=FALSE, warning=FALSE,  out.width="100%", out.height="100%", dpi=600}
+knitr::include_graphics("photos/markovitz.jpeg")
+```
+
+**Harry Markowitz** is a prominent figure in the field of finance, known particularly for his pioneering work on **Modern Portfolio Theory (MPT)**. Born on August 24, 1927, in Chicago, Markowitz had a keen interest in economics and mathematics. His studies led him to the University of Chicago, where he combined these disciplines to produce groundbreaking work.
+
+In 1952, while working towards his Ph.D. in Economics, Markowitz published an article titled "Portfolio Selection" in the Journal of Finance. This paper laid the foundation for what would later become known as Modern Portfolio Theory. In this paper, he proposed that investors should consider the diversification of their portfolios to mitigate risk. This was a novel idea at the time, as prior theories primarily focused on assessing investments individually based on their expected returns, without considering the broader portfolio context.
+
+In Markowitz's framework, the risk of a portfolio, measured by its variance or standard deviation, could be reduced by selecting assets that do not perfectly correlate with each other. In other words, the poor performance of some investments can be offset by the strong performance of others, leading to a smoother, more predictable overall return.
+
+His methodology for optimizing portfolios became a powerful tool in the world of investment management. The essence of his theory suggested that the risk-return tradeoff could be optimized to construct a portfolio that maximizes expected return for a given level of risk.
+
+In recognition of his substantial contributions to the field of economics, Markowitz was awarded the Nobel Prize in Economic Sciences in 1990, alongside Merton Miller and William Sharpe. Today, his theory remains a cornerstone of investment philosophy, with many financial advisors and investment firms leveraging his principles to guide their decision-making processes.
+
+## Michaud`s REF
+
+```{r michauds image, echo=FALSE, fig.align="center", message=FALSE, warning=FALSE, out.width="100%", out.height="100%", dpi=300}
+knitr::include_graphics("photos/michaud.jpeg")
+```
+
+**Richard Michaud** and his son, **Robert Michaud**, revolutionized portfolio optimization by challenging the conventional wisdom of Harry Markowitz's **Modern Portfolio Theory (MPT)**. In their research, published in 1998, they demonstrate that Markowitz's model, although groundbreaking at the time of its introduction, was in many ways inefficient, as it could lead to portfolios over-concentrated in just a few stocks.
+
+The Michauds proposed a novel approach for portfolio optimization that applied a process known as resampling, which simulates various combinations of assets and their likely future returns. Their method, termed Resampled Efficient Frontier (REF), offers a superior alternative to Markowitz's MPT by providing a more realistic, risk-optimized portfolio.
+
+As per the Michauds, the MPT's greatest flaw is its sensitivity to estimation errors. Even tiny changes in inputs could lead to vastly different portfolios. By contrast, the REF method utilizes Monte Carlo simulations to generate a plethora of possible return scenarios, thereby more accurately reflecting the inherent uncertainty of financial markets. The resultant portfolios are thus better diversified and less susceptible to input estimation errors.
+
+The Michauds' method, integrated into their software called **New Frontier**, has seen significant success. The software's adoption by financial institutions and the Michauds' consulting business's growth is a testament to their innovative approach's efficacy. The Michauds' work, through addressing some of the fundamental weaknesses in Markowitz's theory, has made a significant contribution to the field of financial portfolio optimization.
+
+# Methods and Hypotheses {.tabset}
+
+This study creates three different portfolios using historical data from SMI stocks: an equally weighted portfolio and two optimized portfolios using Monte Carlo simulation. These optimized portfolios have two different characteristics: the first one is the portfolio with the highest Sharpe ratio (measured on daily returns), while the second portfolio was obtained minimizing the risk (standard deviation). 
+
+We compute the expected returns and standard deviations for each portfolio and use the Sharpe Ratio as a gauge of risk-adjusted performance to test these hypotheses.
+
+
+## Tool for the evaluation
+
+A vital tool for quantitative finance is the R package known as **quantmod**, which stands for **"Quantitative Financial Modeling Framework"**. It offers a platform for the creation, evaluation, and application of trading models with a statistical foundation. More specifically, it provides the following features:
+
+* **Financial Data Acquisition:** Quantmod provides a stable and adaptable framework for importing financial data directly into R from a variety of sources. It can import information, for instance, from Yahoo Finance, Google Finance, and other sources. This function assists in making sure the data you are working with is current and trustworthy.
+
+* **Charting and visualization:** Quantmod features a technical analysis-specific charting feature that makes financial and time-series data easier to see. As a result, spotting trends, patterns, and outliers in the data is made simpler.
+
+* **Building financial models:** Quantmod offers a wide range of tools for creating, testing, and implementing statistically driven strategy ideas. Quantmod is a complete rapid prototyping tool, covering everything from data administration through model deployment.
+
+* **Technical Analysis:** In addition to obtaining and displaying data, Quantmod also offers technical analysis services. It provides a range of technical analysis indicators that can be immediately applied or tailored to meet particular requirements.
+
+This package is a powerful tool in R for modeling, trading, and analyzing quantitative financial strategies. It is widely used in financial analytics for data importation, charting capabilities, financial analysis, and modeling, making it a comprehensive package for financial modeling and trading strategy development.
+
+```{r Download of main Swiss Index, message=FALSE, warning=FALSE, include=FALSE}
+library(quantmod)
+
+############################ Download of main Swiss Index ######################
+getSymbols(Symbols = "ABBN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "ALC.SW", auto.assign = TRUE)
+getSymbols(Symbols = "CSGN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "GEBN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "GIVN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "HOLN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "LOGN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "LONN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "NESN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "NOVN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "PGHN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "CFR.SW", auto.assign = TRUE)
+getSymbols(Symbols = "ROG.SW", auto.assign = TRUE)
+getSymbols(Symbols = "SIKA.SW", auto.assign = TRUE)
+getSymbols(Symbols = "SOON.SW", auto.assign = TRUE)
+getSymbols(Symbols = "SLHN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "SREN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "SCMN.SW", auto.assign = TRUE)
+getSymbols(Symbols = "UBSG.SW", auto.assign = TRUE)
+getSymbols(Symbols = "ZURN.SW", auto.assign = TRUE)
+```
+
+```{r calculating daily returns, echo=TRUE, message=FALSE, warning=FALSE}
+########### Calculating the daily returns #############
+ABB_returns <- diff.xts(ABBN.SW$ABBN.SW.Close)[2:length(ABBN.SW$ABBN.SW.Close)]/ABBN.SW$ABBN.SW.Close[1:length(ABBN.SW$ABBN.SW.Close)-1]
+colnames(ABB_returns) <- "ABB"
+Alcon_returns <- diff.xts(ALC.SW$ALC.SW.Close)[2:length(ALC.SW$ALC.SW.Close)]/ALC.SW$ALC.SW.Close[1:length(ALC.SW$ALC.SW.Close)-1]
+colnames(Alcon_returns) <- "ALC"
+CreditSuisse_returns <- diff.xts(CSGN.SW$CSGN.SW.Close)[2:length(CSGN.SW$CSGN.SW.Close)]/CSGN.SW$CSGN.SW.Close[1:length(CSGN.SW$CSGN.SW.Close)-1]
+colnames(CreditSuisse_returns) <- "CSGN"
+Geberit_returns <- diff.xts(GEBN.SW$GEBN.SW.Close)[2:length(GEBN.SW$GEBN.SW.Close)]/GEBN.SW$GEBN.SW.Close[1:length(GEBN.SW$GEBN.SW.Close)-1]
+colnames(Geberit_returns) <- "GEBN"
+Givaudan_retunrs <- diff.xts(GIVN.SW$GIVN.SW.Close)[2:length(GIVN.SW$GIVN.SW.Close)]/GIVN.SW$GIVN.SW.Close[1:length(GIVN.SW$GIVN.SW.Close)-1]
+colnames(Givaudan_retunrs) <- "GIVN"
+Holcim_retunrs <- diff.xts(HOLN.SW$HOLN.SW.Close)[2:length(HOLN.SW$HOLN.SW.Close)]/HOLN.SW$HOLN.SW.Close[1:length(HOLN.SW$HOLN.SW.Close)-1]
+colnames(Holcim_retunrs) <- "HOLN"
+Logitech_returns <- diff.xts(LOGN.SW$LOGN.SW.Close)[2:length(LOGN.SW$LOGN.SW.Close)]/LOGN.SW$LOGN.SW.Close[1:length(LOGN.SW$LOGN.SW.Close)-1]
+colnames(Logitech_returns) <- "LOGN"
+LonzaGroup_returns <- diff.xts(LONN.SW$LONN.SW.Close)[2:length(LONN.SW$LONN.SW.Close)]/LONN.SW$LONN.SW.Close[1:length(LONN.SW$LONN.SW.Close)-1]
+colnames(LonzaGroup_returns) <- "LONN"
+Nestle_returns <- diff.xts(NESN.SW$NESN.SW.Close)[2:length(NESN.SW$NESN.SW.Close)]/NESN.SW$NESN.SW.Close[1:length(NESN.SW$NESN.SW.Close)-1]
+colnames(Nestle_returns) <- "NESN"
+Novartis_returns <- diff.xts(NOVN.SW$NOVN.SW.Close)[2:length(NOVN.SW$NOVN.SW.Close)]/NOVN.SW$NOVN.SW.Close[1:length(NOVN.SW$NOVN.SW.Close)-1]
+colnames(Novartis_returns) <- "NOVN"
+PartnersGroup_returns <- diff.xts(PGHN.SW$PGHN.SW.Close)[2:length(PGHN.SW$PGHN.SW.Close)]/PGHN.SW$PGHN.SW.Close[1:length(PGHN.SW$PGHN.SW.Close)-1]
+colnames(PartnersGroup_returns) <- "PGHN"
+Richemont_returns <- diff.xts(CFR.SW$CFR.SW.Close)[2:length(CFR.SW$CFR.SW.Close)]/CFR.SW$CFR.SW.Close[1:length(CFR.SW$CFR.SW.Close)-1]
+colnames(Richemont_returns) <- "CFR"
+Roche_returns <- diff.xts(ROG.SW$ROG.SW.Close)[2:length(ROG.SW$ROG.SW.Close)]/ROG.SW$ROG.SW.Close[1:length(ROG.SW$ROG.SW.Close)-1]
+colnames(Roche_returns) <- "ROG"
+Sika_returns <- diff.xts(SIKA.SW$SIKA.SW.Close)[2:length(SIKA.SW$SIKA.SW.Close)]/SIKA.SW$SIKA.SW.Close[1:length(SIKA.SW$SIKA.SW.Close)-1]
+colnames(Sika_returns) <- "SIKA"
+Sonova_returns <- diff.xts(SOON.SW$SOON.SW.Close)[2:length((SOON.SW$SOON.SW.Close))]/SOON.SW$SOON.SW.Close[1:length(SOON.SW$SOON.SW.Close)-1]
+colnames(Sonova_returns) <- "SOON"
+SwissLife_returns <- diff.xts(SLHN.SW$SLHN.SW.Close)[2:length(SLHN.SW$SLHN.SW.Close)]/SLHN.SW$SLHN.SW.Close[1:length(SLHN.SW$SLHN.SW.Close)-1]
+colnames(SwissLife_returns) <- "SLHN"
+SwissRe_returns <- diff.xts(SREN.SW$SREN.SW.Close)[2:length(SREN.SW$SREN.SW.Close)]/SREN.SW$SREN.SW.Close[1:length(SREN.SW$SREN.SW.Close)-1]
+colnames(SwissRe_returns) <- "SREN"
+Swisscom_returns <- diff.xts(SCMN.SW$SCMN.SW.Close)[2:length(SCMN.SW$SCMN.SW.Close)]/SCMN.SW$SCMN.SW.Close[1:length(SCMN.SW$SCMN.SW.Close)-1]
+colnames(Swisscom_returns) <- "SCMN"
+UBS_returns <- diff.xts(UBSG.SW$UBSG.SW.Close)[2:length(UBSG.SW$UBSG.SW.Close)]/UBSG.SW$UBSG.SW.Close[1:length(UBSG.SW$UBSG.SW.Close)-1]
+colnames(UBS_returns) <- "UBSG"
+Zurich_returns <- diff.xts(ZURN.SW$ZURN.SW.Close)[2:length(ZURN.SW$ZURN.SW.Close)]/ZURN.SW$ZURN.SW.Close[1:length(ZURN.SW$ZURN.SW.Close)-1]
+colnames(Zurich_returns) <- "ZURN"
+
+```
+
+## Overview of the data
+
+The provided code snippet uses the R packages **"ggplot2", "ggfortify", and "plotly"** to visualize data, with a focus on the financial information of the multinational company ABB.
+
+A strong, grammar-based method for creating descriptive graphics is provided by the robust data visualization package **"ggplot2"** in the R programming language. It helps in the creation of numerous intricate plots using data from a data frame, including scatter plots, line plots, bar plots, and more.
+
+The ggplot2 extension **"ggfortify"** makes it easier to create some complex graphics, like time series, and works well with a number of other statistical software programs. To create line plots for the opening and closing prices, as well as daily returns, of the ABB stock, it is combined with ggplot2 in this code.
+
+On the other hand, **"plotly"** is a program that enables the creation of interactive plots. It improves the plot viewing experience by converting the static ggplot2 plots into interactive ones. Users can pan, zoom, hover over to see specific data points, and do other things.
+
+This code snippet displays the financial information for ABB over time, including the opening price, closing price, and daily returns. These line plots are produced by the **autoplot function**, and further customization is made possible by the theme settings for the legend, plot title, and axis labels. Additionally, using the **geom_abline** function, a horizontal line that represents the average daily return is added to the plot of daily returns. The stock's performance in relation to its average return can be more easily visual interpreted thanks to this feature.
+
+Each static ggplot2 graph is converted into an interactive plot using ggplotly in the final line of each block, enabling a more thorough and in-depth examination of the financial data.
+
+In conclusion, this R code offers a quick and visually appealing way to evaluate the performance of the ABB stock over time, making it easier to fully comprehend its historical trends and volatility patterns.
+
+
+```{r overview of the data, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(ggfortify)
+library(plotly)
+
+ABB_Open_plot <- autoplot(ABBN.SW$ABBN.SW.Open, colour = "navy") +
+  theme(
+    legend.title = element_text(size = 10),
+    plot.title = element_text(color = "black", size = 20)
+  ) +
+  ggtitle(paste("Abb", "Open price", sep = " ")) +
+  ylab("Open Price (in US dollars)") +
+  xlab("Time")
+ggplotly(ABB_Open_plot)
+
+ABB_Close_plot <- autoplot(ts(ABBN.SW$ABBN.SW.Close, start = c(2007, 1, 3), end = c(2023, 5, 8), frequency = 256), colour = "navy")  +
+  theme(
+    legend.title = element_text(size = 10),
+    plot.title = element_text(color = "black", size = 20)
+  ) +
+  ggtitle("ABB Close Price") +
+  ylab("Close Price (in US dollars)") +
+  xlab("Time")
+ggplotly(ABB_Close_plot)
+
+ABB_daily_returns <- autoplot(ABB_returns, colour = "navy")  +
+  geom_abline(slope = 0, intercept = mean(ABB_returns), col = "yellow") +
+  theme(
+    legend.title = element_text(size = 10),
+    plot.title = element_text(color = "black", size = 20)
+  ) +
+  ggtitle("ABB Daily Returns") +
+  ylab("Returns (in US dollars)") +
+  xlab("Time")
+ggplotly(ABB_daily_returns)
+```
+
+## Normality test
+
+Modern Portfolio theory has also been criticized because it assumes that daily returns follow a Gaussian Distribution.
+Already in the 1960s, Benoit Mandelbrot and Eugene Fama showed the inadequacy of this assumption and proposed the use of more general stable distributions instead.
+
+It is crucial to check if the data are normally distributed to evaluate the correctness of the model. 
+The code below shows a possible implementation of a normality test, using a plot and Shapiro test. 
+
+```{r normality test, echo=TRUE, message=FALSE, warning=FALSE}
+ABB_mean = mean(ABB_returns)
+ABB_sigma = sd(ABB_returns)
+normal_mean_sigma = rnorm(length(ABB_returns[,1]), mean = 0, sd = 1)
+qqplot(y = ABB_returns, x = normal_mean_sigma)
+qqline(y= ABB_returns, col = "red")
+title("QQPlot ABB returns vs potential normal distribution")
+df <- as.data.frame(ABB_returns)
+print(shapiro.test(df$ABB))
+```
+
+As expected, the data are not following a Gaussian Distribution. The Shapiro test summary presents a p-value that significantly points to 
+the fact that the distribution is not Normal. Therefore, it is important to consider this aspect when looking at the result with a critical eye. 
+
+## Corelation plot
+
+A pivotal topic in measuring the risk of a single asset is the analysis of standard deviation (and variance). 
+When working with a portfolio, as in the case of Markovitz and Michaud portfolios, the correlation (and covariance) between the 
+assets play a crucial role in the diversification process. 
+
+```{r corrlation_plot, echo=FALSE, include=TRUE, message=FALSE, warning = FALSE, cache = TRUE, fig.width=12}
+########################### Correlation plot ###################################
+library(GGally)
+
+SMI_stocks <- data.frame(
+          ABB = as.vector(ABB_returns),
+          CreditSuisse = as.vector(CreditSuisse_returns),
+          Geberit = as.vector(Geberit_returns),
+          Givaudan = as.vector(Givaudan_retunrs),
+          Holcim = as.vector(Holcim_retunrs),
+          Logitech = as.vector(Logitech_returns),
+          LonzaGroup = as.vector(LonzaGroup_returns),
+          Nestle = as.vector(Nestle_returns),
+          Novartis = as.vector(Novartis_returns),
+          PartnersGroup = as.vector(PartnersGroup_returns),
+          Richemont = as.vector(Richemont_returns),
+          Roche = as.vector(Roche_returns),
+          Sika = as.vector(Sika_returns),
+          Sonova = as.vector(Sonova_returns),
+          Swisscom = as.vector(Swisscom_returns),
+          SwissLife = as.vector(SwissLife_returns),
+          SwissRe = as.vector(SwissRe_returns),
+          UBS = as.vector(UBS_returns),
+          Zurich = as.vector(Zurich_returns))
+#SMI_stocks
+
+print(cov(SMI_stocks, use = "pairwise.complete.obs"))
+
+correlation_plot <- ggpairs(data = SMI_stocks, columns = 1:19) +
+  theme(
+    legend.title = element_text(size = 10),
+    plot.title = element_text(color = "black", size = 20)
+  ) +
+  ggtitle("Pearson Correlation Plot")
+correlation_plot
+```
+
+In this section, the reader can go through the values of the covariance matrix. 
+The graph above is created thanks to **GGAlly** a library that comes in handy when working with correlation plots. 
+In particular, the graph is represented in a tabular form, with the main diagonal that shows the densities of assets,
+the lower triangular matrix displays the paired distribution with a scatter plot and the upper triangular matrix 
+presents the value of the Pearson correlation coefficient.
+
+# Calculations and comparisions {.tabset}
+
+In this section, the reader can get through the creation of the three different portfolios. 
+In each subsection is possible to go through two different processes. The first one, the equally weighted portfolio, is extremely simple and 
+it is done mainly to prove that using equally weighted portfolios is often not the best idea. On the other hand, the second and third portfolios
+are optimised with a Monte Carlo simulation, therefore, they are quite accurate in selecting the portfolio with minimum risk, and the one with 
+a higher Sharpe ratio. 
+
+Before going through the results, it is important to define the assumptions that we applied to the models:
+
+1. The risk-free rate in the Sharpe ratio formula is equal to zero.
+
+2. We assume that weights are just in the interval between 0 and 1 (no short position).
+
+3. All the returns are daily (if needed to extract the annual return it is possible to perform the simple calculation (1 + daily_return)^252).
+
+4. We assume that all the assumptions of Markovitz and Michaud models were satisfied, including Gaussian Distribution.
+
+5. For the visualisation in this document we opted for using the same 5 stocks. More interactiveness can be found on the Shiny App.
+
+6. The Alcon return time series was not considered in the model since it was not on the same time window as the others.
+
+## Equally Weighted Portfolio 
+
+For the equally weighted portfolio, we created the code below. We are looking at 5 companies' stocks that can generate a very high results with 
+only positive weights.
+
+Here are the main steps:
+
+1. define the asset that we want in the portfolio, and the weights.
+
+2. calculate the expected return of the portfolio by multiplying the mean for the weight (daily)
+
+3. calculate the standard deviation of the portfolio considering the variance and the covariance.
+
+4. calculate the Sharpe ratio (daily)
+
+
+```{r equal weighted portfolio, message=FALSE, warning=FALSE, include=TRUE}
+###################### equal weighted portfolio ################################
+###################### first case with 5 stocks ################################
+
+weights_5_stocks = ((1/5)*c(1,1,1,1,1))
+
+# we select the last five stocks, for not particular reason
+stocks_returns <- xts()
+stocks_returns <- merge.xts(LonzaGroup_returns, 
+                            Sonova_returns,
+                            Richemont_returns,
+                            Sika_returns,
+                            Nestle_returns)
+
+mean_vector <- c()
+
+for (i in 1:length(stocks_returns[1,])){
+  mean_vector[i] <- mean(stocks_returns[, i])
+}
+
+
+expected_return_5_stock <- 0 
+
+for (i in 1:length(stocks_returns[1,])){
+  expected_return_5_stock <- expected_return_5_stock + weights_5_stocks[i] * mean_vector[i]
+}
+# expected_return_5_stock
+expected_return_5_stock_annual <- ((1 + expected_return_5_stock)**252) - 1
+# expected_return_5_stock_annual
+# mean_vector
+
+var_5_stoks <- 0
+# calculation of the standard deviation of this portfolio
+for (i in 1:length(stocks_returns[1,])){
+  for (j in 1:length(stocks_returns[1,])){
+    
+    if (names(stocks_returns)[i] == names(stocks_returns)[j]){
+      var_5_stoks <- var_5_stoks + (weights_5_stocks[i]**2) * var(stocks_returns[ , i])
+      # print(var_5_stoks)
+    }
+    else{
+      var_5_stoks <- var_5_stoks + (weights_5_stocks[i] * weights_5_stocks[j]) * var(x = stocks_returns[ , i], y = stocks_returns[ , j])
+      # print(var_5_stoks)
+    }
+    
+  }
+}
+
+sd_5_stocks <- as.numeric(sqrt(var_5_stoks))
+print(cat("Equally weighted portfolio risk:", sd_5_stocks, sep = " "))
+
+sharpe_ratio_5_stocks_ew <- as.numeric((expected_return_5_stock/(sd_5_stocks)))
+print(cat("Equally weighted portfolio Sharpe Ratio (daily basis):", sharpe_ratio_5_stocks_ew, sep = " "))
+
+ew_portfolio <- data.frame(expectedReturn = expected_return_5_stock,
+                           portfolioRisk = sd_5_stocks)
+# print(ew_portfolio)
+```
+
+
+
+## Optimisation of a portfolio, general case
+
+
+The assets that we decide to include in the portfolio are the same as in the previous case.
+
+The steps for portfolio creation are:
+
+1. define the assets that are in the portfolio and the number of simulations.
+
+2. allocate some variables to store weights, expected return, risk, and Sharpe ratio.
+
+3. in a for loop, calculate the expected return, risk, Sharpe ratio and weights for each simulation
+
+4. with suitable R tools for dealing with xts objects, create a table with all the information generated
+
+5. extract the ***minimized risk portfolio** and the maximized **risk portfolio**
+
+
+```{r Oprimisation of a portfolio general case, echo=TRUE, message=FALSE, warning=FALSE}
+############ Optimisation of a portfolio, general case #########################
+
+stocks_returns <- merge.xts(LonzaGroup_returns, 
+                            Sonova_returns,
+                            Richemont_returns,
+                            Sika_returns,
+                            Nestle_returns)
+# stocks_returns
+
+mean_vector <- c()
+
+for (i in 1:length(stocks_returns[1,])){
+  mean_vector[i] <- mean(stocks_returns[, i])
+}
+
+portfolio_numbers <- 10000
+
+# weight_matrix <- matrix(nrow = portfolio_numbers, ncol = length(stocks_returns[1,]))
+weight_matrix <- data.frame(matrix(nrow = 0, ncol = length(stocks_returns[1,])))
+
+# vector("numeric", length = portfolio_numbers) 
+portfolio_returns <- c()
+portfolio_risk <- c()
+portfolio_sharpe <- c()
+
+for (i in 1:portfolio_numbers){
+  
+  temp_weight <- runif(length(stocks_returns[1,]), min = 0, max = 1)
+  norm_temp_weight <- temp_weight/sum(temp_weight)
+
+  weight_matrix[i, ] <- norm_temp_weight[1:length(norm_temp_weight)]
+  
+  port_daily_returns <- sum(temp_weight*mean_vector)
+  port_return_value <- (((1 + port_daily_returns)**252) - 1)
+  portfolio_returns[i] <- port_daily_returns
+ 
+  port_risk_value <- 0
+  stocks_returns_temp <- as.data.frame(stocks_returns)
+  # calculation of the standard deviation of this portfolio
+  for (j in 1:length(stocks_returns_temp)){
+    for (k in 1:length(stocks_returns_temp)){
+      if (names(stocks_returns_temp)[j] == names(stocks_returns_temp)[k]){
+        port_risk_value <- port_risk_value + (norm_temp_weight[j]**2) * var(stocks_returns_temp[ , j])
+      }
+      else{
+        port_risk_value <- port_risk_value + (norm_temp_weight[j] * norm_temp_weight[k]) * var(x = stocks_returns_temp[ , j], y = stocks_returns_temp[ , k])
+      }
+    }
+  }
+  
+  portfolio_risk[i] <- sqrt(port_risk_value)
+  
+  port_sharpe_ratio <- (port_daily_returns/(sqrt(port_risk_value)))
+  portfolio_sharpe[i] <- port_sharpe_ratio
+}
+
+
+library(tibble)
+library(timetk)
+total_portfolio <- tibble(Returns = portfolio_returns,
+                          Risk = portfolio_risk,
+                          Sharpe = portfolio_sharpe)
+
+weight_matrix <- tk_tbl(weight_matrix)
+colnames(weight_matrix) <- colnames(stocks_returns)
+
+total_portfolio <- tk_tbl(cbind(weight_matrix, total_portfolio))
+
+# head(total_portfolio)
+
+minimum_variance_portfolio <- total_portfolio[which.min(total_portfolio$Risk), ]
+minimum_variance_portfolio
+min_risk_portfolio <- data.frame(expectedReturn = as.numeric(minimum_variance_portfolio[1,6]),
+                                   portfolioRisk = as.numeric(minimum_variance_portfolio[1,7]))
+# min_risk_portfolio
+maximum_sharpe_ratio_portfolio <- total_portfolio[which.max(total_portfolio$Sharpe),]
+maximum_sharpe_ratio_portfolio
+max_sharpe_portfolio <- data.frame(expectedReturn = as.numeric(maximum_sharpe_ratio_portfolio[1,6]),
+                           portfolioRisk = as.numeric(maximum_sharpe_ratio_portfolio[1,7]))
+# max_sharpe_portfolio
+
+# efficient frontier:
+p <- ggplot(data = total_portfolio,
+            aes(x = Risk, y = Returns, color = Sharpe)) +
+  geom_point() +
+  theme_classic() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x = "Risk",
+       y = "Returns",
+       title = "Portfolio Frontier") +
+   geom_point(aes(x= Risk, y = Returns), data = minimum_variance_portfolio, color = "green") +
+  geom_point(aes(x = Risk, y = Returns), data = maximum_sharpe_ratio_portfolio, color = "red")
+
+ggplotly(p)
+```
+
+In this case, we also decided to show a scatter plot. To generate the Markovitz efficient frontier it is necessary to imagine
+to draw a quadratic line (half-horizontal parable) from the green point to the red point. 
+
+# Drawing Portfolio Frontier {.tabset}
+
+Harry Markowitz created Modern Portfolio Theory (MPT) which is a graphic representation of all possible arrangements of risky assets that maximize expected return for a specific level of portfolio risk or, conversely, minimize risk for a specific level of expected return.
+The efficient frontier is built in a number of stages. First, the covariance matrix and expected returns for each asset in the portfolio are computed. As a measure of how closely returns on various assets move together, the covariance matrix is crucial because assets with returns that move in opposite directions can help diversify a portfolio and lower its overall risk.
+Next, the expected return and risk of the portfolio are determined for every possible asset combination (risk is typically expressed as the standard deviation of returns). For each level of risk, the asset combination that produces the highest expected return is noted.
+The Markowitz efficient frontier is comprised of this collection of ideal portfolios. The efficient frontier is typically a curved line that increases at a decreasing rate as risk increases when risk is plotted on a graph with expected return on the y-axis and risk on the x-axis. This illustrates the law of diminishing marginal returns, which states that the expected return increases less rapidly the more risk that is assumed.
+The efficient frontier can be used by investors to select portfolios that fit their risk appetite and return goals. They avoid taking on more risk than is necessary to achieve their desired level of return by only taking into account portfolios that are on the efficient frontier, or, put another way, they avoid accepting less return than they could receive given their risk tolerance.
+
+A portfolio optimization technique called the Michaud Resampled Efficient Frontier was created by Robert Michaud and his son Richard Michaud. It is an improvement over the standard Markowitz Mean-Variance Optimization that takes into account the sensitivity of that method to estimation error. The method's main goal is to recognize and take into consideration the uncertainty in the input estimates (expected returns, variances, and covariances).
+In the conventional Markowitz method, the efficient frontier is formed using a single estimate of the expected returns, variances, and covariances. Due to the large impact that small changes in the input estimates have on the efficient frontier, this approach can result in portfolios that are heavily concentrated in a small number of assets.
+The Michaud Resampling method addresses this problem by recognizing the uncertainty in our estimates. It generates numerous sets of potential inputs from a distribution centered on our initial estimates rather than relying solely on single point estimates. The efficient frontier is then calculated for each of these sets. The average of these frontiers makes up the final Resampled Efficient Frontier, which results in a portfolio that is stronger and more diversified.
+In this way, the optimization process is affected by the resampling process, which adds a new type of risk called estimation error. The Michauds claim that more diversified portfolios are more likely to outperform their sample on average.
+The Michaud Resampled Efficient Frontier, which improves upon the conventional Markowitz approach by taking into account the uncertainty in the input estimates, offers a more realistic approach to portfolio optimization. It produces portfolios that are stronger and less susceptible to the inherent volatility of the financial markets.
+
+In the subsections below it is possible to see how to build a portfolio frontier with the two different approaches.
+
+## Normal Markovitz frontier calculation
+
+To solve the quadric form we use the R library **quadprogXT**. 
+We use 100 points to draw the frontier. 
+The steps to build a portfolio frontier are the following:
+
+1. define the assets in the portfolio
+2. define the set of potential expected return
+3. initialise portfolio return vector, risk vector, and portfolio weight
+4. solve the system 
+5. draw the frontier
+
+```{r Normal Markovitz frontier calculation, echo=TRUE, message=FALSE, warning=FALSE, include=TRUE}
+
+library(quadprogXT)
+
+stocks_returns <- merge.xts(LonzaGroup_returns, 
+                            Sonova_returns,
+                            Richemont_returns,
+                            Sika_returns,
+                            Nestle_returns)
+
+mean_vector <- c()
+
+for (i in 1:length(stocks_returns[1,])){
+  mean_vector[i] <- mean(stocks_returns[, i])
+}
+
+number_assets <- length(stocks_returns[1,])
+
+covariance_matrix <- (cov(stocks_returns))
+number_of_points <- 100
+
+set_mu <- seq(min(mean_vector), max(mean_vector), length = number_of_points + 2)
+
+set_mu <- set_mu[1:number_of_points + 1]
+
+
+portfolio_ret <- set_mu
+portfolio_std <- set_mu*0
+portfolio_wgt <- matrix(0,number_of_points, number_assets)
+
+for (i in 1:number_of_points){
+  # print(i)
+  Dmat <- 2*covariance_matrix
+  # print(Dmat)
+  dvec <- rep(0,number_assets)
+  # print(dvec)
+  Amat <- t(rbind(t(rep(1,number_assets)),t(mean_vector),diag(number_assets)))
+  # print(Amat)
+  bvec <- c(1, set_mu[i], rep(0,number_assets))
+  # print(bvec)
+  
+  m <- solveQPXT(Dmat, dvec, Amat, bvec, meq=2, factorized=FALSE)
+  
+  portfolio_std[i] <- sqrt(m$value)
+  portfolio_wgt[i, ] <- t(m$solution)
+  
+}
+
+plot(sqrt(diag(covariance_matrix)), mean_vector,
+     xlim=c(0.5*min(portfolio_std),1.5*max(portfolio_std)), 
+     ylim=c(0.5*min(mean_vector),2.5*max(mean_vector)),
+     col = "yellow", lwd = 3,
+     xlab = "Risk",
+     ylab = "Daily return")
+title("Portfolio Frontier")
+text(sqrt(diag(covariance_matrix)), mean_vector,
+     labels=colnames(stocks_returns), cex= 0.7)
+
+
+# efficient frontier
+lines(portfolio_std,portfolio_ret,col = "navy")
+points(y = ew_portfolio$expectedReturn[1], x = ew_portfolio$portfolioRisk[1], col = "green", lwd = 3)
+text(y = ew_portfolio$expectedReturn[1], x = ew_portfolio$portfolioRisk[1], labels="EWP", cex = 0.7)
+points(y = min_risk_portfolio$expectedReturn[1], x = min_risk_portfolio$portfolioRisk[1], col = "orange", lwd = 3)
+text(y = min_risk_portfolio$expectedReturn[1], x = min_risk_portfolio$portfolioRisk[1], labels="MinRisk", cex = 0.7)
+points(y = max_sharpe_portfolio$expectedReturn[1], x = max_sharpe_portfolio$portfolioRisk[1], col = "red", lwd = 3)
+text(y = max_sharpe_portfolio$expectedReturn[1], x = max_sharpe_portfolio$portfolioRisk[1], labels="MaxSR", cex = 0.7)
+```
+
+The portfolio frontier is defined between the expected return of the maximum Sharpe ratio asset and the expected return of the one with lower risk.
+In this case, the reader can appreciate how the portfolio frontier found with the optimisation of the Sharpe ratio can be much higher in terms of daily returns. 
+
+## Michaud´s Resempled Efficient Frontier 
+
+For the Michaud Resampled frontier, we use the library quadprogXT together with the library **MASS** to use the function mvrnorm.
+The steps to create the frontier are the following:
+
+1. define the assets in the portfolio
+
+2. define the set of potential expected return
+
+3. initialise portfolio return vector, risk vector, and portfolio weight for the resampled case
+
+4. we use a double for loop to create a simulation of normal time series
+
+5. use resampling to extract a more reliable solution
+
+6. solve the system
+
+7. draw the frontier
+
+```{r michaud resempled portfolio, message=FALSE, warning=FALSE, include=TRUE}
+########## Michaud Resampled portfolio #########################################
+
+library(MASS)
+
+stocks_returns <- merge.xts(LonzaGroup_returns, 
+                            Sonova_returns,
+                            Richemont_returns,
+                            Sika_returns,
+                            Nestle_returns)
+
+mean_vector <- c()
+
+for (i in 1:length(stocks_returns[1,])){
+  mean_vector[i] <- mean(stocks_returns[, i])
+}
+
+number_assets <- length(stocks_returns[1,])
+
+covariance_matrix <- (cov(stocks_returns))
+number_of_points <- 300
+
+resampling_number <- 1000
+
+set_mu <- seq(min(mean_vector), max(mean_vector), length = number_of_points + 2)
+
+set_mu <- set_mu[1:number_of_points + 1]
+
+
+portfolio_ret_re <- set_mu
+portfolio_std_re <- set_mu*0
+portfolio_wgt_re <- matrix(0,number_of_points, number_assets)
+
+for (rr in 1:resampling_number){
+  simulated_ts <- mvrnorm(n=120, mean_vector, covariance_matrix)
+  mu_sim <- colMeans(simulated_ts)
+  cov_sim <- cov(simulated_ts)
+  
+  mu_set_sim <- seq(min(mu_sim),max(mu_sim),length=(number_of_points+2))
+  mu_set_sim <- mu_set_sim[1:number_of_points+1]
+  
+  port_ret_sim <- mu_set_sim
+  port_std_sim <- mu_set_sim*0
+  port_wgt_sim <- matrix(0,number_of_points, number_assets)
+  
+  nn = 0
+  for (i in 1:number_of_points){
+    # print(i)
+    Dmat <- 2*cov_sim
+    # print(Dmat)
+    dvec <- rep(0,number_assets)
+    # print(dvec)
+    Amat <- t(rbind(t(rep(1,number_assets)),t(mu_sim),diag(number_assets)))
+    # print(Amat)
+    bvec <- c(1, mu_set_sim[i], rep(0,number_assets))
+    # print(bvec)
+    
+    m <- solveQPXT(Dmat, dvec, Amat, bvec, meq=2, factorized=FALSE)
+
+    # print(m)
+    port_std_sim[i] <- sqrt(m$value)
+    port_wgt_sim[i, ] <- t(m$solution)
+    
+  }
+  
+  portfolio_ret_re <- portfolio_ret_re + port_ret_sim
+  portfolio_wgt_re <- portfolio_wgt_re + port_wgt_sim
+}
+
+
+
+
+portfolio_wgt_re <- portfolio_wgt_re/resampling_number
+portfolio_ret_re <- portfolio_ret_re/resampling_number
+
+for (i in 1:number_of_points){
+  portfolio_ret_re[i] <- portfolio_wgt_re[i, ]%*%mean_vector
+  portfolio_std_re[i] <- sqrt(portfolio_wgt_re[i,]%*%covariance_matrix%*%portfolio_wgt_re[i,])
+}
+
+######## plotting michaud portfolio ############################################
+
+plot(sqrt(diag(covariance_matrix)), mean_vector,
+     xlim=c(0.5*min(portfolio_std),1.5*max(portfolio_std)), 
+     ylim=c(0.5*min(mean_vector),2.5*max(mean_vector)),
+     col = "yellow", lwd = 3,
+     xlab = "Risk",
+     ylab = "Daily return")
+title("Resampled Portfolio Frontier")
+text(sqrt(diag(covariance_matrix)), mean_vector,
+     labels=colnames(stocks_returns), cex= 0.7)
+
+
+# efficient frontier
+# lines(portfolio_std,portfolio_ret,col = "navy", lwd = 3)
+lines(portfolio_std_re,portfolio_ret_re,col = "cyan", lwd = 3)
+points(y = ew_portfolio$expectedReturn[1], x = ew_portfolio$portfolioRisk[1], col = "green", lwd = 3)
+text(y = ew_portfolio$expectedReturn[1], x = ew_portfolio$portfolioRisk[1], labels="EWP", cex = 0.7)
+points(y = min_risk_portfolio$expectedReturn[1], x = min_risk_portfolio$portfolioRisk[1], col = "orange", lwd = 3)
+text(y = min_risk_portfolio$expectedReturn[1], x = min_risk_portfolio$portfolioRisk[1], labels="MinRisk", cex = 0.7)
+points(y = max_sharpe_portfolio$expectedReturn[1], x = max_sharpe_portfolio$portfolioRisk[1], col = "red", lwd = 3)
+text(y = max_sharpe_portfolio$expectedReturn[1], x = max_sharpe_portfolio$portfolioRisk[1], labels="MaxSR", cex = 0.7)
+```
+
+In this case, the result is way more compressed, this is due to all the consideration beyond resampling. Also in this case,
+the red dot is much higher than the efficient frontier since the frontier was defined, as in Markovitz's frontier,
+between the expected return of the maximum Sharpe ratio asset and the expected return of the one with lower risk.
+
+# Conclusion
+
+To summarise, this document aims to show a possible implementation of how to create a portfolio, following the principles of diversification and asset allocation. 
+The reader can find much valuable information regarding the methods and how to implement the code. 
+We have also created a Shiny web application to interactively show our results. (The application can be found in the same folder as the script)
+The idea behind the application is related to the fact that we want the users to be able to understand and create a portfolio, using a very simple and intuitive dashboard.
+
+This project was conducted during the exam "Time Series Analysis in Finance" by professors Thomas Ankebrand and Denis Bieri, at HSLU Luzern.
+First of all, we would like to thank the professors for this amazing course. We believe that this project is only the first step of a more complete work. 
+We would love to implement ulteriorly our ideas on the topic.
+In general, we believe that Markovitz and Michaud's Efficient frontier can be two important methods to define a portfolio that is diversified and can be lucrative for investors. Therefore, we aim to develop and implement an already existent application (in R-Shiny) to create an interactive tool 
+to help people better understand how to construct their portfolios. 
+We would like also to expand the possibilities of choosing not only between the SMI stock market but also to other international financial markets.
+In addition, it would be amazing to implement a script to add to the portfolio forms of alternative investments (options, real estate...).
+
+# Bibilography {.tabset}
+
+https://www.investopedia.com/terms/h/harrymarkowitz.asp#toc-the-development-of-modern-portfolio-theory
+
+https://www.hmarkowitz.com/about-harry-markowitz/
+
+https://www.newfrontieradvisors.com
+
+https://www.institutionalinvestor.com/article/b150qcw4jnw0mj/portfolio-theory-from-markowitz-to-michaud
+
+https://www.forbes.com/sites/danielfisher/2017/05/09/father-and-son-know-best-about-how-to-bend-the-efficient-frontier/
+
+https://www.r-bloggers.com/2021/05/markowitz-v-s-michaud-portfolio-optimization-with-r-code/
+
+https://rpubs.com/cliex159/863521
+
+https://cran.r-project.org/web/packages/PerformanceAnalytics/vignettes/portfolio_returns.pdf
+
